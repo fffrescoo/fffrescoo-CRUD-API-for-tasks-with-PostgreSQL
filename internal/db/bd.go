@@ -2,11 +2,9 @@ package db
 
 import (
 	"fmt"
-	"log"
-	"pedprojectFinal/internal/models"
-
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"log"
 )
 
 func InitDB() (*gorm.DB, error) {
@@ -19,11 +17,6 @@ func InitDB() (*gorm.DB, error) {
 	log.Println("Connected to database successfully.")
 
 	log.Println("Running auto-migration...")
-	err = db.AutoMigrate(&models.Task{})
-	if err != nil {
-		log.Printf("AutoMigrate error: %v", err)
-		return nil, fmt.Errorf("failed to migrate database: %w", err)
-	}
 	log.Println("Migration completed.")
 
 	return db, nil
