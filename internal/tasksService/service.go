@@ -5,10 +5,11 @@ import (
 	"pedprojectFinal/internal/models"
 )
 
-// TaskService определяет интерфейс сервиса для работы с задачами
+// TaskService определяет бизнес-логику
 type TaskService interface {
 	CreateTask(task string) (*models.Task, error)
-	GetTaskByID(id uint) (*models.Task, error)
+	GetAll() ([]*models.Task, error)
+	GetByID(id uint) (*models.Task, error)
 	UpdateTask(id uint, newTask string) (*models.Task, error)
 	DeleteTask(id uint) error
 }
@@ -17,7 +18,6 @@ type taskService struct {
 	repo TaskRepository
 }
 
-// NewTaskService создает новый экземпляр сервиса задач
 func NewTaskService(repo TaskRepository) TaskService {
 	return &taskService{repo: repo}
 }
@@ -38,7 +38,11 @@ func (s *taskService) CreateTask(task string) (*models.Task, error) {
 	return newTask, nil
 }
 
-func (s *taskService) GetTaskByID(id uint) (*models.Task, error) {
+func (s *taskService) GetAll() ([]*models.Task, error) {
+	return s.repo.GetAll()
+}
+
+func (s *taskService) GetByID(id uint) (*models.Task, error) {
 	return s.repo.GetByID(id)
 }
 

@@ -1,4 +1,4 @@
-package db
+package database
 
 import (
 	"fmt"
@@ -6,6 +6,8 @@ import (
 	"gorm.io/gorm"
 	"log"
 )
+
+var DB *gorm.DB
 
 func InitDB() (*gorm.DB, error) {
 	dsn := "host=localhost user=appuser password=12345 dbname=taskdb port=5432 sslmode=disable"
@@ -15,9 +17,6 @@ func InitDB() (*gorm.DB, error) {
 		return nil, fmt.Errorf("failed to connect database: %w", err)
 	}
 	log.Println("Connected to database successfully.")
-
-	log.Println("Running auto-migration...")
-	log.Println("Migration completed.")
-
+	DB = db
 	return db, nil
 }

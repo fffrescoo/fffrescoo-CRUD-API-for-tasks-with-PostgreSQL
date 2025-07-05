@@ -1,27 +1,29 @@
 package main
 
 import (
-	"log"
-
 	"github.com/labstack/echo/v4"
-
-	"pedprojectFinal/internal/db"
+	"github.com/labstack/echo/v4/middleware"
+	"log"
+	"pedprojectFinal/internal/database"
 	"pedprojectFinal/internal/handlers"
+	"pedprojectFinal/internal/tasksService"
+	"pedprojectFinal/internal/web/tasks"
 )
 
 func main() {
+	database.InitDB()
+	repo := tasksService.NewTaskRepository(database.DB)
+	service := tasksService.NewTaskService(repo)
+	handler := handlers.NewHandler(service)
+
 	e := echo.New()
+	e.Use(middleware.Logger())
+	e.Use(middleware.Recover())
 
-	database, err := db.InitDB()
-	if err != nil {
-		log.Fatal(err)
+	strictHandler := tasks.NewStrictHandler(handler, nil)
+	tasks.RegisterHandlers(e, strictHandler)
+
+	if err := e.Start(":8080"); err != nil {
+		log.Fatalf("failed to start with err: %v", err)
 	}
-	handlers.SetDB(database)
-
-	e.GET("/tasks", handlers.GetHandler)
-	e.POST("/tasks", handlers.PostHandler)
-	e.PATCH("/tasks/:id", handlers.PatchHandler)
-	e.DELETE("/tasks/:id", handlers.DeleteHandler)
-
-	e.Logger.Fatal(e.Start(":8080"))
 }

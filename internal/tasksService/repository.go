@@ -5,10 +5,11 @@ import (
 	"pedprojectFinal/internal/models"
 )
 
-// TaskRepository определяет интерфейс для работы с хранилищем задач
+// TaskRepository определяет интерфейс доступа к данным
 type TaskRepository interface {
 	Create(task *models.Task) error
 	GetByID(id uint) (*models.Task, error)
+	GetAll() ([]*models.Task, error)
 	Update(task *models.Task) error
 	Delete(id uint) error
 	Exists(id uint) (bool, error)
@@ -18,7 +19,6 @@ type taskRepository struct {
 	db *gorm.DB
 }
 
-// NewTaskRepository создает новый экземпляр репозитория
 func NewTaskRepository(db *gorm.DB) TaskRepository {
 	return &taskRepository{db: db}
 }
@@ -31,6 +31,12 @@ func (r *taskRepository) GetByID(id uint) (*models.Task, error) {
 	var task models.Task
 	err := r.db.First(&task, id).Error
 	return &task, err
+}
+
+func (r *taskRepository) GetAll() ([]*models.Task, error) {
+	var tasks []*models.Task
+	err := r.db.Find(&tasks).Error
+	return tasks, err
 }
 
 func (r *taskRepository) Update(task *models.Task) error {

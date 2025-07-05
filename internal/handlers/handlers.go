@@ -1,56 +1,93 @@
 package handlers
 
 import (
-	"github.com/labstack/echo/v4"
-	"gorm.io/gorm"
-	"net/http"
-
-	"pedprojectFinal/internal/models"
+	"context"
+	"fmt"
+	"pedprojectFinal/internal/tasksService"
+	"pedprojectFinal/internal/web/tasks"
 )
 
-var DB *gorm.DB
-
-func SetDB(db *gorm.DB) {
-	DB = db
+type Handler struct {
+	service tasksService.TaskService
 }
 
-func GetHandler(c echo.Context) error {
-	var tasks []models.Task
-	if err := DB.Find(&tasks).Error; err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
-	}
-	return c.JSON(http.StatusOK, tasks)
+func NewHandler(service tasksService.TaskService) *Handler {
+	return &Handler{service: service}
 }
 
-func PostHandler(c echo.Context) error {
-	task := new(models.Task)
-	if err := c.Bind(task); err != nil {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": err.Error()})
+// GET /tasks
+func (h *Handler) GetTasks(ctx context.Context, _ tasks.GetTasksRequestObject) (tasks.GetTasksResponseObject, error) {
+	allTasks, err := h.service.GetAll()
+	if err != nil {
+		return nil, err
 	}
 
-	if err := DB.Create(task).Error; err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+	// Инициализируем пустой слайс, чтобы при пустом списке возвращался []
+	response := make(tasks.GetTasks200JSONResponse, 0)
+	for _, t := range allTasks {
+		task := tasks.Task{
+			Id:   uintPtr(uint(t.ID)),
+			Task: &t.Task,
+		}
+		response = append(response, task)
 	}
-	return c.JSON(http.StatusCreated, task)
+
+	return response, nil
 }
 
-func PatchHandler(c echo.Context) error {
-	id := c.Param("id")
-	var task models.Task
-	if err := DB.First(&task, id).Error; err != nil {
-		return c.JSON(http.StatusNotFound, echo.Map{"error": "Task not found"})
+// POST /tasks
+func (h *Handler) PostTasks(ctx context.Context, req tasks.PostTasksRequestObject) (tasks.PostTasksResponseObject, error) {
+	if req.Body == nil || req.Body.Task == nil {
+		return nil, fmt.Errorf("invalid request body: missing task")
 	}
-	if err := c.Bind(&task); err != nil {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": err.Error()})
+
+	created, err := h.service.CreateTask(*req.Body.Task)
+	if err != nil {
+		return nil, err
 	}
-	DB.Save(&task)
-	return c.JSON(http.StatusOK, task)
+
+	resp := tasks.PostTasks201JSONResponse{
+		Id:   uintPtr(uint(created.ID)),
+		Task: &created.Task,
+	}
+
+	return resp, nil
 }
 
-func DeleteHandler(c echo.Context) error {
-	id := c.Param("id")
-	if err := DB.Delete(&models.Task{}, id).Error; err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+// PATCH /tasks/{id}
+func (h *Handler) PatchTasksId(ctx context.Context, req tasks.PatchTasksIdRequestObject) (tasks.PatchTasksIdResponseObject, error) {
+	id := uint(req.Id)
+
+	if req.Body == nil || req.Body.Task == nil {
+		return nil, fmt.Errorf("missing updated task text")
 	}
-	return c.NoContent(http.StatusNoContent)
+
+	updated, err := h.service.UpdateTask(id, *req.Body.Task)
+	if err != nil {
+		return tasks.PatchTasksId404Response{}, nil // Task not found
+	}
+
+	resp := tasks.Task{
+		Id:   uintPtr(uint(updated.ID)),
+		Task: &updated.Task,
+	}
+
+	return tasks.PatchTasksId200JSONResponse(resp), nil
+}
+
+// DELETE /tasks/{id}
+func (h *Handler) DeleteTasksId(ctx context.Context, req tasks.DeleteTasksIdRequestObject) (tasks.DeleteTasksIdResponseObject, error) {
+	id := uint(req.Id)
+
+	err := h.service.DeleteTask(id)
+	if err != nil {
+		return tasks.DeleteTasksId404Response{}, nil // Task not found
+	}
+
+	return tasks.DeleteTasksId204Response{}, nil
+}
+
+// вспомогательная функция для uint
+func uintPtr(v uint) *uint {
+	return &v
 }
