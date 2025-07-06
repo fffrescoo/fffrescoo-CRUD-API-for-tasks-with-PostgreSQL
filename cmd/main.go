@@ -11,8 +11,11 @@ import (
 )
 
 func main() {
-	database.InitDB()
-	repo := tasksService.NewTaskRepository(database.DB)
+	db, err := database.InitDB()
+	if err != nil {
+		log.Fatalf("failed to initialize database: %v", err)
+	}
+	repo := tasksService.NewTaskRepository(db)
 	service := tasksService.NewTaskService(repo)
 	handler := handlers.NewHandler(service)
 
